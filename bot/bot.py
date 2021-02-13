@@ -38,7 +38,7 @@ def on_close(ws):
 
 def on_message(ws, message):
     global closes, in_position
-        json_message = json.loads(message)
+    json_message = json.loads(message)
     candle = json_message['k']
 
     is_candle_closed = candle['x']
