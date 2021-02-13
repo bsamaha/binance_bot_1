@@ -3,7 +3,6 @@ import websocket, json, pprint, talib, numpy
 import config
 from binance.client import Client
 from binance.enums import *
-
 SOCKET = "wss://stream.binance.com:9443/ws/ethbtc@kline_1m"
 
 RSI_PERIOD = 14
@@ -16,6 +15,8 @@ closes = []
 in_position = False
 
 client = Client(config.API_KEY, config.API_SECRET, tld='us')
+info = client.get_symbol_info(TRADE_SYMBOL)
+min_qty = float(info['filters'][2]['minQty'])
 
 def order(side, quantity, symbol,order_type=ORDER_TYPE_MARKET):
     try:
@@ -62,7 +63,10 @@ def on_message(ws, message):
             if last_rsi > RSI_OVERBOUGHT:
                 if in_position:
                     print("Overbought! Sell! Sell! Sell!")
-                    order_succeeded = order(SIDE_SELL, TRADE_QUANTITY, TRADE_SYMBOL)
+                    balance = client.get_asset_balance(asset=TRADE_SYMBOL[:3])['free']
+                    trade_qty = round(balance, (len(str(min_qty)) - 2))
+
+                    order_succeeded = order(SIDE_SELL, trade_qty, TRADE_SYMBOL)
                     if order_succeeded:
                         in_position = False
                 else:
