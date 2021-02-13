@@ -1,8 +1,9 @@
   
-import websocket, json, pprint, talib, numpy
+import websocket, json, pprint, talib, numpy, twitter
 import config
 from binance.client import Client
 from binance.enums import *
+
 SOCKET = "wss://stream.binance.com:9443/ws/ethbtc@kline_1m"
 
 RSI_PERIOD = 14
@@ -51,8 +52,6 @@ def on_message(ws, message):
         if len(closes) > RSI_PERIOD:
             np_closes = numpy.array(closes)
             rsi = talib.RSI(np_closes, RSI_PERIOD)
-            print("all rsis calculated so far")
-            print(rsi)
             last_rsi = rsi[-1]
             print("the current rsi is {}".format(last_rsi))
 
@@ -61,8 +60,13 @@ def on_message(ws, message):
                     print("Overbought! Sell! Sell! Sell!")
                     balance = client.get_asset_balance(asset=TRADE_SYMBOL[:3])['free']
                     trade_qty = round(balance, (len(str(min_qty)) - 2))
-
                     order_succeeded = order(SIDE_SELL, trade_qty, TRADE_SYMBOL)
+                    t = Twitter(auth=OAuth(config.twitter_token,
+                                            config.twitter_token_secret,
+                                            config.twitter_consumer_key,
+                                            config.twitter_consumer_secret))
+                    t.statuses.update(status=f"Trigger {SIDE_BUY} {TRADE_SYMBOL} at {close}")
+
                     if order_succeeded:
                         in_position = False
                 else:
@@ -74,6 +78,11 @@ def on_message(ws, message):
                 else:
                     print("Oversold! Buy! Buy! Buy!")
                     order_succeeded = order(SIDE_BUY, TRADE_QUANTITY, TRADE_SYMBOL)
+                    t = Twitter(auth=OAuth(config.twitter_token,
+                                            config.twitter_token_secret,
+                                            config.twitter_consumer_key,
+                                            config.twitter_consumer_secret))
+                    t.statuses.update(status=f"Trigger {SIDE_SELL} {TRADE_SYMBOL} at {close}")
                     if order_succeeded:
                         in_position = True
 
